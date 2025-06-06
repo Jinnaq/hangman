@@ -98,20 +98,12 @@ class HangmanAPI(object):
         else:
             ###### N_gram
             n_gram_min = max(len_word-3,3)
-            # if len(self.n_gram_dictionary) == 0:
-            #     n_gram_dictionary = self.build_n_gram_dict(clean_word, min(n_gram_min,len(clean_word)))
-            #     self.n_gram_dictionary = n_gram_dictionary
-            # else:
-            #     n_gram_dictionary = self.n_gram_dictionary
             if len(self.n_gram_dictionary) == 0 and self.n_gram_used == 0:
                 n_gram_dictionary = self.build_n_gram_dict(clean_word, min(n_gram_min,len(clean_word)))
                 n_gram_backup = self.build_n_gram_dict(clean_word, min(3,len(clean_word)))
                 self.n_gram_dictionary = n_gram_dictionary
                 self.n_gram_backup = n_gram_backup
                 self.n_gram_used = 1
-            # elif len(self.n_gram_dictionary) == 0 and self.n_gram_used == 1:
-            #     n_gram_dictionary = self.n_gram_backup
-                # print('used n_gram_backup with lengthen: ' + str(len(n_gram_dictionary)))
             else:
                 n_gram_dictionary = self.n_gram_dictionary
             print('len(self.n_gram_dictionary) is ' + str(len(self.n_gram_dictionary)))
@@ -124,18 +116,15 @@ class HangmanAPI(object):
             # collect all the possible letters from n_gram match
             matched_chars_ngram,matched_ngrams = self.matched_letter(target_grams,n_gram_dictionary)
             self.n_gram_dictionary = matched_ngrams
-            # print('len(self.n_gram_dictionary) is ' + str(len(self.n_gram_dictionary)))
             print('some matched grams are: ')
             print(matched_ngrams[:3] + matched_ngrams[-3:])
-            # print('number of matched_ngrams are ' + str(len(matched_ngrams)))
             
             # count occurrence of all characters in possible word matches
             full_dict_string = matched_chars_ngram
-            
             c = collections.Counter(full_dict_string)
             sorted_letter_count = c.most_common() 
-            print('letters predicted by n_grams are: ')
             filtered_most_common_by_ngram = [(char, prob) for char, prob in sorted_letter_count if char not in self.guessed_letters]
+            print('letters predicted by n_grams are: ')
             print(filtered_most_common_by_ngram)   
             
             ###### switch to larger N_gram dictionary 
@@ -157,10 +146,9 @@ class HangmanAPI(object):
                 print('len(matched_ngrams) is '+str(len(matched_ngrams)))
                 print(filtered_most_common_by_ngram)
                 
-
-
             final_list = filtered_most_common_by_ngram
 
+            # Gave up using LSTM -_-##
             # check model result first          
             # print('top 5 letters predicted by birectional lstm are: ')
             # most_common_by_bimodel = bi_lstm.predict_missing(bi_lstm_model, vocab, word_for_model)
@@ -200,40 +188,6 @@ class HangmanAPI(object):
                         break 
             
             return guess_letter
-    
-    def combine_and_filter_predictions(self, lstm_result, ngram_result, guessed_letters, alpha):
-        """
-        Combine LSTM and N-gram results with weighting, and remove guessed letters.
-
-        Parameters:
-        - lstm_result: list of (char, prob) from LSTM, e.g. [('a', 0.5), ('b', 0.3), ...]
-        - ngram_result: list of (char, count) from N-gram, e.g. [('a', 50000), ('b', 45000), ...]
-        - guessed_letters: set or list of already guessed letters, e.g. {'a', 'e'}
-        - alpha: weight for LSTM, (1 - alpha) is the weight for N-gram
-
-        Returns:
-        - combined: list of (char, combined_score), sorted by score descending
-        """
-        # Normalize ngram counts to probabilities
-        total_ngram = sum(count for _, count in ngram_result)
-        ngram_probs = {char: count / total_ngram for char, count in ngram_result}
-
-        # Convert LSTM result to dict
-        lstm_probs = dict(lstm_result)
-
-        # Combine scores
-        all_chars = set(lstm_probs) | set(ngram_probs)
-        combined = {}
-        for char in all_chars:
-            if char in guessed_letters:
-                continue
-            lstm_p = lstm_probs.get(char, 0)
-            ngram_p = ngram_probs.get(char, 0)
-            combined[char] = alpha * lstm_p + (1 - alpha) * ngram_p
-
-        # Sort by combined score
-        sorted_combined = sorted(combined.items(), key=lambda x: x[1], reverse=True)
-        return sorted_combined
 
 
     def matched_letter(self, target_grams, ngrams_dict):
@@ -320,6 +274,40 @@ class HangmanAPI(object):
                     break 
         
         return guess_letter
+    
+    # def combine_and_filter_predictions(self, lstm_result, ngram_result, guessed_letters, alpha):
+    #     """
+    #     Combine LSTM and N-gram results with weighting, and remove guessed letters.
+
+    #     Parameters:
+    #     - lstm_result: list of (char, prob) from LSTM, e.g. [('a', 0.5), ('b', 0.3), ...]
+    #     - ngram_result: list of (char, count) from N-gram, e.g. [('a', 50000), ('b', 45000), ...]
+    #     - guessed_letters: set or list of already guessed letters, e.g. {'a', 'e'}
+    #     - alpha: weight for LSTM, (1 - alpha) is the weight for N-gram
+
+    #     Returns:
+    #     - combined: list of (char, combined_score), sorted by score descending
+    #     """
+    #     # Normalize ngram counts to probabilities
+    #     total_ngram = sum(count for _, count in ngram_result)
+    #     ngram_probs = {char: count / total_ngram for char, count in ngram_result}
+
+    #     # Convert LSTM result to dict
+    #     lstm_probs = dict(lstm_result)
+
+    #     # Combine scores
+    #     all_chars = set(lstm_probs) | set(ngram_probs)
+    #     combined = {}
+    #     for char in all_chars:
+    #         if char in guessed_letters:
+    #             continue
+    #         lstm_p = lstm_probs.get(char, 0)
+    #         ngram_p = ngram_probs.get(char, 0)
+    #         combined[char] = alpha * lstm_p + (1 - alpha) * ngram_p
+
+    #     # Sort by combined score
+    #     sorted_combined = sorted(combined.items(), key=lambda x: x[1], reverse=True)
+    #     return sorted_combined
 
 
     ##########################################################
